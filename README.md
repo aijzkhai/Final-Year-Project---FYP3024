@@ -1,8 +1,4 @@
-Sure! Here's a complete `README.md` file tailored for your **FocusMate** Flutter app, suitable for a GitHub repository. It includes setup instructions and context for your FYP project (FYP3024):
-
 ---
-
-```markdown
 # 📱 FocusMate - FYP3024 Final Year Project
 
 Welcome to **FocusMate**, a productivity and focus-enhancing mobile application developed as part of the Final Year Project for the subject **FYP3024**. This app aims to help users stay focused, manage distractions, and build better work habits using guided focus sessions and intelligent break reminders.
