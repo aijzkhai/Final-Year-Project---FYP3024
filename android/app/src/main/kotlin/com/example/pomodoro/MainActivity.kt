@@ -1,4 +1,4 @@
-package com.example.pomodoro_app
+package com.example.pomodoro
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -60,7 +60,7 @@ class MainActivity: FlutterActivity() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         
         val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
