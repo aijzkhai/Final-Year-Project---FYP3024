@@ -18,7 +18,7 @@ class UserManualScreen extends StatelessWidget {
             context,
             title: 'Getting Started',
             content:
-                'Welcome to the Pomodoro App! This manual will help you understand how to use the app effectively for your productivity needs.',
+                'Welcome to FocusMate! This manual will help you understand how to use the app effectively for your productivity needs.',
             image: Image.asset(
               'assets/images/manual_1.png',
               fit: BoxFit.none,

@@ -58,7 +58,7 @@ class AuthScreen extends StatelessWidget {
 
                     // Subtitle
                     Text(
-                      'Focus better with Pomodoro',
+                      'Focus better with FocusMate',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: Colors.white.withOpacity(0.9),
                           ),
