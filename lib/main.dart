@@ -11,8 +11,41 @@ import 'services/storage_service.dart';
 import 'services/auth_service.dart';
 import 'services/database_helper.dart';
 import 'services/web_storage.dart';
+import 'utils/app_info.dart';
+import 'dart:io';
 
-void main() {
+void main() async {
+  // Initialize Flutter binding
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize database based on platform
+  if (kIsWeb) {
+    print("Running on web platform - initializing web storage");
+    await WebStorage.initialize();
+  } else {
+    if (Platform.isAndroid || Platform.isIOS) {
+      // Initialize FFI SQLite for mobile platforms
+      print(
+          "Initializing SQLite for ${Platform.isAndroid ? 'Android' : 'iOS'}");
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+
+      // Initialize database
+      final dbHelper = DatabaseHelper();
+      await dbHelper.initializeDatabase();
+
+      // Ensure database tables are created properly
+      await dbHelper.ensureDatabaseIsReady();
+
+      // Repair authentication tables if needed
+      await dbHelper.repairAuthentication();
+
+      // Initialize AuthService to ensure auth tables are ready
+      final authService = AuthService();
+      await authService.ensureAuthTablesExist();
+    }
+  }
+
   runApp(const MyInitApp());
 }
 
@@ -35,15 +68,7 @@ class _MyInitAppState extends State<MyInitApp> {
 
   Future<void> _initializeApp() async {
     try {
-      // Initialize Flutter binding
-      WidgetsFlutterBinding.ensureInitialized();
-
       if (!kIsWeb) {
-        // Initialize SQLite (for native platforms only)
-        print("Initializing SQLite for native platform");
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-
         // Reset database to ensure it's in a clean state
         print("Resetting database...");
         await DatabaseHelper().resetDatabase();
@@ -60,8 +85,6 @@ class _MyInitAppState extends State<MyInitApp> {
         }
       } else {
         print("Running on web platform - no SQLite initialization needed");
-        // Initialize web storage
-        await WebStorage.initialize();
       }
 
       // Set loading to false when done
@@ -146,7 +169,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
-            title: 'Pomodoro Timer',
+            title: AppInfo.appName,
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,

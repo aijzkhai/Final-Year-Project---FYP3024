@@ -18,9 +18,18 @@ class AuthService {
   // Add DatabaseHelper instance
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
+  // Make sure database tables are created
+  Future<void> ensureAuthTablesExist() async {
+    if (!kIsWeb) {
+      await _dbHelper.repairAuthentication();
+    }
+  }
+
   // Check if user is authenticated
   Future<bool> isAuthenticated() async {
     try {
+      await ensureAuthTablesExist();
+
       if (kIsWeb) {
         // For web, check if we have user data in SharedPreferences
         final prefs = await SharedPreferences.getInstance();
@@ -39,6 +48,7 @@ class AuthService {
   Future<User?> signIn(String email, String password) async {
     try {
       print('Attempting sign in for email: $email');
+      await ensureAuthTablesExist();
 
       // For web platform
       if (DatabaseHelper.isWeb) {
@@ -75,13 +85,16 @@ class AuthService {
         return null;
       }
 
+      print('Querying database for user with email: $email');
       final List<Map<String, dynamic>> maps = await db.query(
         'users',
         where: 'email = ? AND password = ?',
         whereArgs: [email.toLowerCase(), password],
       );
 
+      print('Found ${maps.length} matching users');
       if (maps.isNotEmpty) {
+        print('User found, creating User object');
         final user = User(
           id: maps[0]['id'],
           email: maps[0]['email'],
@@ -93,9 +106,11 @@ class AuthService {
         );
 
         // Set as current user
+        print('Setting as current user: ${user.id}');
         await _saveCurrentUser(user.id);
 
         // Update last login time
+        print('Updating last login time');
         await db.update(
           'users',
           {'last_login': DateTime.now().millisecondsSinceEpoch},
@@ -103,8 +118,11 @@ class AuthService {
           whereArgs: [user.id],
         );
 
+        print('Login successful for: ${user.email}');
         return user;
       }
+
+      print('No matching user found for email: $email');
       return null;
     } catch (e) {
       print('Error during sign in: $e');
@@ -116,6 +134,7 @@ class AuthService {
   Future<User?> signUp(String name, String email, String password) async {
     try {
       print('Attempting sign up for email: $email');
+      await ensureAuthTablesExist();
 
       // Check if user already exists
       bool userExists = await _checkUserExists(email);
@@ -151,6 +170,7 @@ class AuthService {
         return null;
       }
 
+      print('Inserting new user into database: ${user.email}');
       final id = await db.insert(
         'users',
         {
@@ -161,15 +181,19 @@ class AuthService {
           'created_at': user.createdAt.millisecondsSinceEpoch,
           'last_login': DateTime.now().millisecondsSinceEpoch,
           'is_guest': user.isGuest ? 1 : 0,
+          'profile_image_path': user.profileImagePath,
         },
       );
 
       if (id > 0) {
         // Set as current user
+        print('Setting as current user: ${user.id}');
         await _saveCurrentUser(user.id);
+        print('Signup successful for: ${user.email}');
         return user;
       }
 
+      print('Failed to insert user into database');
       return null;
     } catch (e) {
       print('Error during sign up: $e');
@@ -457,7 +481,44 @@ class AuthService {
 
   // Helper method to save current user
   Future<void> _saveCurrentUser(String userId) async {
-    await _dbHelper.setCurrentUserById(userId);
+    try {
+      print('Saving current user ID: $userId');
+      await ensureAuthTablesExist();
+
+      if (DatabaseHelper.isWeb) {
+        // For web, save in SharedPreferences
+        print('Saving current user ID to web storage');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('current_user_id', userId);
+        await prefs.setBool(_authKey, true);
+        return;
+      }
+
+      // For native platforms, use SQLite
+      final db = await _dbHelper.database;
+      if (db == null) {
+        print('Database not initialized');
+        return;
+      }
+
+      // Clear existing current user entries
+      print('Clearing existing current user entries');
+      await db.delete('current_user');
+
+      // Insert new current user
+      print('Inserting new current user entry');
+      await db.insert(
+        'current_user',
+        {
+          'id': const Uuid().v4(),
+          'user_id': userId,
+        },
+      );
+
+      print('Current user saved successfully');
+    } catch (e) {
+      print('Error saving current user: $e');
+    }
   }
 
   // Helper method to saveUserToWebStorage

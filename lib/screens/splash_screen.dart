@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../utils/constants.dart';
+import '../utils/app_info.dart';
 import '../screens/auth_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/onboarding_screen.dart';
@@ -122,18 +123,32 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo
-            Icon(
-              Icons.timer,
-              size: 100,
-              color: Colors.white,
+            // App Logo
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  )
+                ],
+              ),
+              child: Icon(
+                Icons.timer,
+                size: 80,
+                color: AppColors.primary,
+              ),
             ).animate().fade(duration: 500.ms).scale(delay: 300.ms),
 
             const SizedBox(height: AppConstants.spacing24),
 
             // App name
             Text(
-              'FocusMate AI',
+              AppInfo.appName,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -144,7 +159,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
             // Tagline
             Text(
-              'Boost your productivity',
+              AppInfo.appTagline,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Colors.white.withOpacity(0.9),
                   ),

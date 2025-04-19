@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/database_initializer.dart';
 import '../services/web_storage.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // Basic memory cache for web platform
 final Map<String, dynamic> _webCache = {};
@@ -29,6 +30,17 @@ class DatabaseHelper {
 
   DatabaseHelper._internal();
 
+  // Initialize the database at app startup
+  Future<void> initializeDatabase() async {
+    if (isWeb) {
+      print('Web platform detected - initializing web storage');
+      await WebStorage.initialize();
+    } else {
+      print('Native platform detected - initializing SQLite');
+      await _initDatabase();
+    }
+  }
+
   Future<Database?> get database async {
     if (_database != null) return _database;
 
@@ -39,8 +51,13 @@ class DatabaseHelper {
       return null;
     } else {
       // Only initialize the database for native platforms
-      _database = await _initDatabase();
-      return _database;
+      try {
+        _database = await _initDatabase();
+        return _database;
+      } catch (e) {
+        print('Error initializing database: $e');
+        return null;
+      }
     }
   }
 
@@ -229,16 +246,24 @@ class DatabaseHelper {
     } else {
       // For native platforms, use SQLite with databaseFactory
       try {
+        // Initialize SQLite FFI
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+
         final databasesPath = await getDatabasesPath();
         final path = join(databasesPath, 'pomodoro.db');
         print('Using native SQLite database at: $path');
 
+        // Create the database tables if they don't exist
         return await databaseFactory.openDatabase(
           path,
           options: OpenDatabaseOptions(
             version: 1,
             onCreate: _createDatabase,
             onUpgrade: _onUpgrade,
+            onOpen: (db) {
+              print('Database opened successfully');
+            },
           ),
         );
       } catch (e, stackTrace) {
@@ -1844,6 +1869,90 @@ class DatabaseHelper {
       return;
     } catch (e) {
       print('Error resetting database: $e');
+    }
+  }
+
+  // Add this method after _initDatabase()
+  Future<void> ensureDatabaseIsReady() async {
+    try {
+      if (isWeb) {
+        // For web, ensure web storage is initialized
+        await WebStorage.initialize();
+        return;
+      }
+
+      // For native platforms, check if tables exist
+      final db = await database;
+      if (db == null) {
+        print('Database is null, cannot ensure it is ready');
+        return;
+      }
+
+      // Check if the users table exists
+      final tables = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+
+      if (tables.isEmpty) {
+        print('Users table not found, creating database tables');
+        await _createDatabase(db, 1);
+      } else {
+        print('Database tables already exist');
+      }
+    } catch (e) {
+      print('Error ensuring database is ready: $e');
+    }
+  }
+
+  // Also add a method to check and fix login issues
+  Future<void> repairAuthentication() async {
+    try {
+      if (isWeb) {
+        return; // Web doesn't need repair
+      }
+
+      final db = await database;
+      if (db == null) {
+        print('Database is null, cannot repair authentication');
+        return;
+      }
+
+      // First check if the tables exist
+      final userTableExists = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+
+      if (userTableExists.isEmpty) {
+        print('Users table not found, creating it');
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS users(
+            id TEXT PRIMARY KEY,
+            email TEXT UNIQUE,
+            name TEXT,
+            password TEXT,
+            created_at INTEGER,
+            last_login INTEGER,
+            profile_image_path TEXT,
+            is_guest INTEGER DEFAULT 0
+          )
+        ''');
+      }
+
+      final currentUserTableExists = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='current_user'");
+
+      if (currentUserTableExists.isEmpty) {
+        print('Current user table not found, creating it');
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS current_user(
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+          )
+        ''');
+      }
+
+      print('Authentication tables repaired');
+    } catch (e) {
+      print('Error repairing authentication: $e');
     }
   }
 }

@@ -2,11 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:pomodoro/providers/task_provider.dart';
-import 'package:pomodoro/providers/timer_provider.dart';
-import 'package:pomodoro/screens/home_screen.dart';
-import 'package:pomodoro/models/task_model.dart';
-import 'package:pomodoro/widgets/task_item.dart';
+import 'package:FocusMate/providers/task_provider.dart';
+import 'package:FocusMate/providers/timer_provider.dart';
+import 'package:FocusMate/screens/home_screen.dart';
+import 'package:FocusMate/models/task_model.dart';
+import 'package:FocusMate/widgets/task_item.dart';
 
 void main() {
   testWidgets('App should render the home screen with task lists',
